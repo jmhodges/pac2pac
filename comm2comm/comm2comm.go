@@ -8,17 +8,16 @@ import (
 	"github.com/jmhodges/pac2pac/commparse"
 )
 
-// Transaction is a Schedule B transaction of money sent from SendingCommittee
+// Transaction is a transaction of money sent from SendingCommittee
 // to ReceivingCommittee.
 type Transaction struct {
 	SendingCommittee   commparse.CommitteeID
 	ReceivingCommittee commparse.CommitteeID
 }
 
-// ParseFile parses a file of transactions of money sent from committees (PACs)
-// to other committees (PACs). This is the "Any transaction from one committee
-// to another" file on the FEC website at
-// https://www.fec.gov/data/advanced/?tab=bulk-data .
+// ParseFile parses a file of transactions of money sent from committees to
+// other committees. This is the "Any transaction from one committee to another"
+// file on the FEC website at https://www.fec.gov/data/advanced/?tab=bulk-data .
 func ParseFile(fp string) ([]Transaction, error) {
 	b, err := ioutil.ReadFile(fp)
 	if err != nil {
@@ -42,40 +41,17 @@ func ParseFile(fp string) ([]Transaction, error) {
 	return trans, nil
 }
 
-type PACSet map[commparse.CommitteeID]struct{}
+type CommIDSet map[commparse.CommitteeID]struct{}
 
-func (p PACSet) Add(committee commparse.CommitteeID) {
+func (p CommIDSet) Add(committee commparse.CommitteeID) {
 	p[committee] = struct{}{}
 }
-func (p PACSet) Has(committee commparse.CommitteeID) bool {
+func (p CommIDSet) Has(committee commparse.CommitteeID) bool {
 	_, found := p[committee]
 	return found
 }
-func (p PACSet) Del(committee commparse.CommitteeID) {
+func (p CommIDSet) Del(committee commparse.CommitteeID) {
 	delete(p, committee)
-}
-
-// HighTrafficSendingLimit is the default lowerLimit used in the
-// HighTrafficSendingPACs to determine if a PAC should be returned for sending
-// to many other PACs. It was determined by looking at the histogram of PACs and
-// identifying
-const HighTrafficSendingLimit = 100
-
-// HighTrafficSendingPACs returns a PACSet of the committees that sent to more
-// committees (PACs) than lowerLimit. If lowerLimit is less than zero, the
-// default HighTrafficSendingLimit constant is used as the default.
-func HighTrafficSendingPACs(data Maps, lowerLimit int) PACSet {
-	if lowerLimit < 0 {
-		lowerLimit = HighTrafficSendingLimit
-	}
-
-	set := make(PACSet)
-	for committee, recvs := range data.SendingCommitteeToReceivers {
-		if len(recvs) > lowerLimit {
-			set.Add(committee)
-		}
-	}
-	return set
 }
 
 // Maps is a struct for hold what committees send money to what committees
@@ -84,22 +60,22 @@ func HighTrafficSendingPACs(data Maps, lowerLimit int) PACSet {
 type Maps struct {
 	// SendingCommitteeToReceivers is a map from a commitee id that sent money
 	// to the committes it sent money to.
-	SendingCommitteeToReceivers map[commparse.CommitteeID]PACSet
+	SendingCommitteeToReceivers map[commparse.CommitteeID]CommIDSet
 
 	// ReceivingCommitteeToSenders is a map from a commitee id that received
 	// money to the committes that sent money to it.
-	ReceivingCommitteeToSenders map[commparse.CommitteeID]PACSet
+	ReceivingCommitteeToSenders map[commparse.CommitteeID]CommIDSet
 }
 
 func MoneyMapsFromTransactions(trans []Transaction) Maps {
 	data := Maps{
-		SendingCommitteeToReceivers: make(map[commparse.CommitteeID]PACSet),
-		ReceivingCommitteeToSenders: make(map[commparse.CommitteeID]PACSet),
+		SendingCommitteeToReceivers: make(map[commparse.CommitteeID]CommIDSet),
+		ReceivingCommitteeToSenders: make(map[commparse.CommitteeID]CommIDSet),
 	}
 	for _, t := range trans {
 		recvs, found := data.SendingCommitteeToReceivers[t.SendingCommittee]
 		if !found {
-			recvs = make(PACSet, 1)
+			recvs = make(CommIDSet, 1)
 		}
 		recvs.Add(t.ReceivingCommittee)
 		if !found {
@@ -108,7 +84,7 @@ func MoneyMapsFromTransactions(trans []Transaction) Maps {
 
 		sends, found := data.ReceivingCommitteeToSenders[t.SendingCommittee]
 		if !found {
-			sends = make(PACSet, 1)
+			sends = make(CommIDSet, 1)
 		}
 		sends.Add(t.SendingCommittee)
 		if !found {

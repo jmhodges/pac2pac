@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	comm2commFile = flag.String("comm2comm", "", "the file containing the committee to committee transactions (PAC to PAC transactions), often something like 'itoth.txt' (required)")
-	commFile      = flag.String("comm", "", "the file containing the list of all committees (PACs) and their information (a.k.a. the 'Committee master'), often something like 'cm.txt' (required)")
+	comm2commFile = flag.String("comm2comm", "", "the file containing the committee to committee transactions, often something like 'itoth.txt' (required)")
+	commFile      = flag.String("comm", "", "the file containing the list of all committees and their information (a.k.a. the 'Committee master'), often something like 'cm.txt' (required)")
 )
 
 func main() {
